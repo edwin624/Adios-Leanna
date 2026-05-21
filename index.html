@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Para Leanna, de Edwin</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Pinyon+Script&family=Jost:wght@200;300&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --cream: #f5ede0;
+    --dark: #1a1008;
+    --rose: #c0616a;
+    --gold: #b8860b;
+    --muted: #7a6555;
+    --fog: rgba(245,237,224,0.06);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: #0e0b08;
+    color: var(--cream);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* ── Custom cursor ── */
+  #cursor {
+    position: fixed; top: 0; left: 0; z-index: 9999;
+    width: 12px; height: 12px;
+    background: var(--rose);
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%,-50%);
+    transition: transform .15s ease, opacity .3s;
+    mix-blend-mode: screen;
+  }
+  #cursor-trail {
+    position: fixed; top: 0; left: 0; z-index: 9998;
+    width: 30px; height: 30px;
+    border: 1px solid rgba(192,97,106,.4);
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%,-50%);
+    transition: transform .35s ease;
+  }
+
+  /* ── Stars canvas ── */
+  #stars-canvas {
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ── Petals canvas ── */
+  #petals-canvas {
+    position: fixed; inset: 0; z-index: 1;
+    pointer-events: none;
+  }
+
+  /* ── Intro screen ── */
+  #intro {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: #0e0b08;
+    transition: opacity 1.5s ease, visibility 1.5s;
+  }
+  #intro.hidden { opacity: 0; visibility: hidden; }
+
+  .intro-name {
+    font-family: 'Pinyon Script', cursive;
+    font-size: clamp(5rem, 14vw, 11rem);
+    color: var(--cream);
+    opacity: 0;
+    transform: translateY(30px);
+    animation: fadeUp 1.4s forwards .3s;
+    text-shadow: 0 0 80px rgba(192,97,106,.5);
+  }
+  .intro-sub {
+    font-family: 'Jost', sans-serif;
+    font-weight: 200;
+    letter-spacing: .5em;
+    font-size: clamp(.6rem, 2vw, .85rem);
+    color: var(--muted);
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeUp 1.2s forwards 1s;
+    margin-top: 1rem;
+  }
+  .intro-btn {
+    margin-top: 4rem;
+    opacity: 0;
+    animation: fadeUp 1s forwards 1.8s;
+    background: transparent;
+    border: 1px solid rgba(192,97,106,.5);
+    color: var(--rose);
+    font-family: 'Jost', sans-serif;
+    font-weight: 200;
+    letter-spacing: .4em;
+    font-size: .75rem;
+    text-transform: uppercase;
+    padding: .9rem 2.5rem;
+    cursor: none;
+    transition: background .4s, color .4s, border-color .4s, box-shadow .4s;
+  }
+  .intro-btn:hover {
+    background: var(--rose);
+    color: var(--dark);
+    border-color: var(--rose);
+    box-shadow: 0 0 40px rgba(192,97,106,.4);
+  }
+
+  /* ── Main content ── */
+  #main {
+    position: relative; z-index: 10;
+    opacity: 0;
+    transition: opacity 1.5s ease 0s;
+  }
+  #main.visible { opacity: 1; }
+
+  /* ── Hero section ── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    position: relative;
+  }
+
+  .hero-eyebrow {
+    font-family: 'Jost', sans-serif;
+    font-weight: 200;
+    letter-spacing: .6em;
+    font-size: .7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 1s ease .2s;
+  }
+  .hero-eyebrow.revealed { opacity: 1; transform: none; }
+
+  .hero-title {
+    font-family: 'Pinyon Script', cursive;
+    font-size: clamp(4rem, 12vw, 9rem);
+    line-height: 1;
+    margin: 1.5rem 0 1rem;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 1.3s ease .5s;
+    background: linear-gradient(135deg, var(--cream) 0%, var(--rose) 50%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-title.revealed { opacity: 1; transform: none; }
+
+  .hero-date {
+    font-family: 'Jost', sans-serif;
+    font-weight: 200;
+    letter-spacing: .3em;
+    font-size: .75rem;
+    color: var(--muted);
+    opacity: 0;
+    transition: all 1s ease .9s;
+  }
+  .hero-date.revealed { opacity: .7; }
+
+  .scroll-hint {
+    position: absolute; bottom: 3rem;
+    display: flex; flex-direction: column; align-items: center; gap: .7rem;
+    opacity: 0;
+    animation: fadeUp 1s forwards 3.5s;
+  }
+  .scroll-hint span {
+    font-family: 'Jost', sans-serif;
+    font-weight: 200;
+    letter-spacing: .4em;
+    font-size: .6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .scroll-line {
+    width: 1px; height: 50px;
+    background: linear-gradient(to bottom, var(--rose), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    display: flex; align-items: center; gap: 1.5rem;
+    padding: 0 2rem;
+    margin: 2rem auto;
+    max-width: 600px;
+  }
+  .divider-line { flex: 1; height: 1px; background: rgba(192,97,106,.25); }
+  .divider-heart {
+    color: var(--rose);
+    font-size: 1.1rem;
+    animation: heartbeat 2.5s ease-in-out infinite;
+  }
+
+  /* ── Letter sections ── */
+  .letter {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 6rem 2.5rem;
+  }
+
+  .letter-block {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 1s ease, transform 1s ease;
+  }
+  .letter-block.revealed { opacity: 1; transform: none; }
+
+  .letter-label {
+    font-family: 'Jost', sans-serif;
+    font-weight: 200;
+    letter-spacing: .6em;
+    font-size: .65rem;
+    color: var(--rose);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    display: block;
+  }
+
+  .letter-text {
+    font-size: clamp(1.05rem, 2.2vw, 1.25rem);
+    line-height: 2;
+    font-weight: 300;
+    color: rgba(245,237,224,.85);
+  }
+  .letter-text em {
+    font-style: italic;
+    color: var(--cream);
+  }
+  .letter-text strong {
+    font-weight: 400;
+    color: var(--rose);
+  }
+
+  /* ── Pull quote ── */
+  .pull-quote {
+    font-family: 'Pinyon Script', cursive;
+    font-size: clamp(2rem, 6vw, 3.8rem);
+    color: var(--rose);
+    text-align: center;
+    line-height: 1.3;
+    padding: 4rem 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+    opacity: 0;
+    transform: scale(.95);
+    transition: opacity 1.2s ease, transform 1.2s ease;
+    text-shadow: 0 0 60px rgba(192,97,106,.3);
+  }
+  .pull-quote.revealed { opacity: 1; transform: scale(1); }
+
+  /* ── Farewell section ── */
+  .farewell {
+    min-height: 80vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 6rem 2rem;
+    position: relative;
+  }
+
+  .farewell-title {
+    font-family: 'Pinyon Script', cursive;
+    font-size: clamp(3rem, 9vw, 7rem);
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 1.5s ease, transform 1.5s ease;
+    background: linear-gradient(135deg, var(--cream), var(--muted));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .farewell-title.revealed { opacity: 1; transform: none; }
+
+  .farewell-body {
+    max-width: 560px;
+    font-size: clamp(1rem, 2vw, 1.15rem);
+    line-height: 2;
+    color: rgba(245,237,224,.65);
+    font-weight: 300;
+    margin-top: 2.5rem;
+    opacity: 0;
+    transition: opacity 1.5s ease .4s;
+  }
+  .farewell-body.revealed { opacity: 1; }
+
+  /* ── Signature ── */
+  .signature-section {
+    text-align: center;
+    padding: 5rem 2rem 8rem;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 1.2s ease, transform 1.2s ease;
+  }
+  .signature-section.revealed { opacity: 1; transform: none; }
+
+  .signature-name {
+    font-family: 'Pinyon Script', cursive;
+    font-size: clamp(3.5rem, 9vw, 6rem);
+    color: var(--cream);
+    text-shadow: 0 0 40px rgba(192,97,106,.4);
+  }
+  .signature-sub {
+    font-family: 'Jost', sans-serif;
+    font-weight: 200;
+    letter-spacing: .5em;
+    font-size: .65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 1rem;
+  }
+
+  /* ── Floating hearts ── */
+  .float-heart {
+    position: fixed;
+    pointer-events: none;
+    font-size: 1.2rem;
+    animation: floatUp 4s ease-in forwards;
+    z-index: 50;
+  }
+
+  /* ── Typewriter cursor ── */
+  .tw-cursor {
+    display: inline-block;
+    width: 2px; height: 1.1em;
+    background: var(--rose);
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: blink .8s step-end infinite;
+  }
+
+  /* ── Keyframes ── */
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes heartbeat {
+    0%,100% { transform: scale(1); }
+    14% { transform: scale(1.3); }
+    28% { transform: scale(1); }
+    42% { transform: scale(1.2); }
+    70% { transform: scale(1); }
+  }
+  @keyframes scrollPulse {
+    0%,100% { opacity: .3; height: 50px; }
+    50% { opacity: 1; height: 70px; }
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+    100% { opacity: 0; transform: translateY(-300px) rotate(45deg) scale(.3); }
+  }
+  @keyframes blink {
+    0%,100% { opacity: 1; } 50% { opacity: 0; }
+  }
+
+  /* ── Noise overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 200;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity: .025;
+    pointer-events: none;
+  }
+
+  /* vignette */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 2;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(14,11,8,.7) 100%);
+    pointer-events: none;
+  }
+
+  /* highlight word */
+  .word-highlight {
+    position: relative;
+    display: inline-block;
+    color: var(--cream);
+  }
+  .word-highlight::after {
+    content: '';
+    position: absolute;
+    left: -2px; right: -2px;
+    bottom: 2px;
+    height: 2px;
+    background: var(--rose);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .6s ease;
+  }
+  .word-highlight.active::after { transform: scaleX(1); }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-trail"></div>
+<canvas id="stars-canvas"></canvas>
+<canvas id="petals-canvas"></canvas>
+
+<!-- ── Intro screen ── -->
+<div id="intro">
+  <h1 class="intro-name">Leanna</h1>
+  <p class="intro-sub">Una carta que el silencio no pudo guardar</p>
+  <button class="intro-btn" onclick="openLetter()">Abrir carta</button>
+</div>
+
+<!-- ── Main letter ── -->
+<div id="main">
+
+  <!-- Hero -->
+  <section class="hero">
+    <span class="hero-eyebrow">Edwin · Leanna</span>
+    <h1 class="hero-title">Con todo<br>mi amor</h1>
+    <span class="hero-date">Y también, con todo mi adiós</span>
+    <div class="scroll-hint">
+      <span>Continuar</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- Letter Part 1 -->
+  <article class="letter">
+    <div class="letter-block">
+      <span class="letter-label">Leanna,</span>
+      <p class="letter-text">
+        Hay cartas que uno escribe muchas veces en la mente antes de atrever a escribirlas de verdad.
+        Esta es una de esas. La he escrito entre silencios, entre noches largas, entre esos momentos
+        donde tu nombre aparece sin que yo lo llame — <em>porque así funciona cuando alguien ya vive dentro de ti.</em>
+      </p>
+    </div>
+
+    <div class="divider">
+      <div class="divider-line"></div>
+      <span class="divider-heart">♡</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <div class="letter-block">
+      <p class="letter-text">
+        Quiero que sepas, antes que cualquier otra cosa, que <strong>amarte fue lo más real que he hecho.</strong>
+        No el amor de las películas — sino el tuyo y el mío: el que tiene textura, el que duele bonito,
+        el que me enseñó qué significa mirar a alguien y querer que esté bien aunque ya no estés conmigo.
+      </p>
+    </div>
+  </article>
+
+  <!-- Pull quote 1 -->
+  <blockquote class="pull-quote">
+    "Te amé con la mejor versión<br>que supe ser."
+  </blockquote>
+
+  <!-- Letter Part 2 -->
+  <article class="letter">
+    <div class="letter-block">
+      <span class="letter-label">Lo que guardo de ti</span>
+      <p class="letter-text">
+        Me quedo con la forma en que reías cuando algo te atrapaba de sorpresa.
+        Con la manera en que pensabas — <em>siempre más profundo de lo que dejabas ver.</em>
+        Con esos momentos pequeños que probablemente tú ya olvidaste y que yo llevo como fotografías
+        dentro del pecho. <strong>No te vas de mí, Leanna.</strong> Solo cambia de lugar.
+      </p>
+    </div>
+
+    <div class="divider">
+      <div class="divider-line"></div>
+      <span class="divider-heart">✦</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <div class="letter-block">
+      <p class="letter-text">
+        Si algo aprendí contigo es que el amor no siempre necesita quedarse para ser eterno.
+        A veces el amor más genuino es el que te <em>desea distancia</em> — no porque ya no importe,
+        sino porque lo que más quieres para ella es que florezca, esté donde deba estar,
+        viva lo que merezca vivir. <strong>Y tú mereces todo lo bueno que existe.</strong>
+      </p>
+    </div>
+  </article>
+
+  <!-- Pull quote 2 -->
+  <blockquote class="pull-quote">
+    "No te digo adiós porque dejé<br>de amarte — sino porque te amo<br>lo suficiente."
+  </blockquote>
+
+  <!-- Letter Part 3 -->
+  <article class="letter">
+    <div class="letter-block">
+      <span class="letter-label">El adiós</span>
+      <p class="letter-text" id="typewriter-text">
+        <!-- filled by JS -->
+      </p>
+      <span class="tw-cursor"></span>
+    </div>
+  </article>
+
+  <!-- Farewell -->
+  <section class="farewell">
+    <h2 class="farewell-title">Hasta siempre, mi amor</h2>
+    <p class="farewell-body">
+      Donde quiera que vayas, llévate esto:
+      hubo alguien que te miró de verdad,
+      que te eligió sin condiciones,
+      y que hoy te suelta — con las manos llenas de gratitud
+      y el corazón lleno de ti.
+    </p>
+  </section>
+
+  <!-- Signature -->
+  <div class="signature-section">
+    <div class="divider">
+      <div class="divider-line"></div>
+      <span class="divider-heart">♡</span>
+      <div class="divider-line"></div>
+    </div>
+    <p style="font-family:'Jost',sans-serif;font-weight:200;letter-spacing:.4em;font-size:.65rem;color:var(--muted);text-transform:uppercase;margin:2rem 0 1rem;">Con amor eterno,</p>
+    <h2 class="signature-name">Edwin</h2>
+    <p class="signature-sub">Para siempre tuyo, aunque ya no estemos</p>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+/* ── Cursor ── */
+const cursor = document.getElementById('cursor');
+const trail = document.getElementById('cursor-trail');
+let mx = 0, my = 0;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx + 'px';
+  cursor.style.top  = my + 'px';
+  setTimeout(() => {
+    trail.style.left = mx + 'px';
+    trail.style.top  = my + 'px';
+  }, 80);
+});
+
+/* ── Stars ── */
+const starsCanvas = document.getElementById('stars-canvas');
+const sCtx = starsCanvas.getContext('2d');
+let stars = [];
+function resizeStars() {
+  starsCanvas.width  = window.innerWidth;
+  starsCanvas.height = window.innerHeight;
+  stars = Array.from({length: 220}, () => ({
+    x: Math.random() * starsCanvas.width,
+    y: Math.random() * starsCanvas.height,
+    r: Math.random() * 1.2 + .3,
+    a: Math.random(),
+    speed: Math.random() * .003 + .001,
+    phase: Math.random() * Math.PI * 2
+  }));
+}
+resizeStars();
+window.addEventListener('resize', resizeStars);
+
+function drawStars(t) {
+  sCtx.clearRect(0,0,starsCanvas.width,starsCanvas.height);
+  stars.forEach(s => {
+    const alpha = .3 + .7 * ((Math.sin(t * s.speed + s.phase) + 1) / 2);
+    sCtx.beginPath();
+    sCtx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    sCtx.fillStyle = `rgba(245,237,224,${alpha * s.a})`;
+    sCtx.fill();
+  });
+  requestAnimationFrame(drawStars);
+}
+requestAnimationFrame(drawStars);
+
+/* ── Rose petals ── */
+const pCanvas = document.getElementById('petals-canvas');
+const pCtx = pCanvas.getContext('2d');
+let petals = [];
+function resizePetals() {
+  pCanvas.width  = window.innerWidth;
+  pCanvas.height = window.innerHeight;
+}
+resizePetals();
+window.addEventListener('resize', resizePetals);
+
+function spawnPetal() {
+  petals.push({
+    x: Math.random() * pCanvas.width,
+    y: -30,
+    size: Math.random() * 12 + 6,
+    speedY: Math.random() * .6 + .3,
+    speedX: (Math.random() - .5) * .4,
+    rot: Math.random() * Math.PI * 2,
+    rotSpeed: (Math.random() - .5) * .02,
+    alpha: Math.random() * .4 + .15,
+    hue: Math.random() * 20 + 340  // pinkish-red
+  });
+}
+
+setInterval(spawnPetal, 320);
+
+function drawPetals() {
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  petals = petals.filter(p => p.y < pCanvas.height + 50);
+  petals.forEach(p => {
+    p.y += p.speedY;
+    p.x += p.speedX + Math.sin(p.y * .02) * .3;
+    p.rot += p.rotSpeed;
+    pCtx.save();
+    pCtx.translate(p.x, p.y);
+    pCtx.rotate(p.rot);
+    pCtx.globalAlpha = p.alpha;
+    // Draw petal shape
+    pCtx.beginPath();
+    pCtx.ellipse(0, 0, p.size * .5, p.size, 0, 0, Math.PI*2);
+    pCtx.fillStyle = `hsl(${p.hue}, 60%, 65%)`;
+    pCtx.fill();
+    pCtx.restore();
+  });
+  requestAnimationFrame(drawPetals);
+}
+requestAnimationFrame(drawPetals);
+
+/* ── Open letter ── */
+function openLetter() {
+  document.getElementById('intro').classList.add('hidden');
+  setTimeout(() => {
+    const main = document.getElementById('main');
+    main.classList.add('visible');
+    document.getElementById('intro').style.display = 'none';
+    revealOnScroll();
+    startTypewriter();
+    addHeartListeners();
+  }, 1600);
+}
+
+/* ── Scroll reveal ── */
+function revealOnScroll() {
+  const els = document.querySelectorAll('.letter-block, .pull-quote, .hero-eyebrow, .hero-title, .hero-date, .farewell-title, .farewell-body, .signature-section');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('revealed');
+        // Underline highlights
+        e.target.querySelectorAll('.word-highlight').forEach((w,i) => {
+          setTimeout(() => w.classList.add('active'), i * 200 + 400);
+        });
+      }
+    });
+  }, { threshold: .15 });
+  els.forEach(el => obs.observe(el));
+}
+
+/* ── Typewriter ── */
+function startTypewriter() {
+  const el = document.getElementById('typewriter-text');
+  const text = `Decirte adiós no significa que me arrepiento. Significa que te respeto demasiado para quedarme donde quizás ya no pertenezco. Significa que prefiero que me recuerdes como quien te amó bien, a convertirme en algo que te pese. Este es mi último regalo para ti, Leanna — soltarte con el corazón abierto. Gracias por haberme dejado quererte. Gracias por todo lo que fuiste en mi vida. Siempre te voy a desear lo mejor del mundo.`;
+  let i = 0;
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) {
+      observer.disconnect();
+      function type() {
+        if (i <= text.length) {
+          el.textContent = text.slice(0, i);
+          i++;
+          setTimeout(type, 28);
+        }
+      }
+      type();
+    }
+  }, {threshold: .3});
+  observer.observe(el);
+}
+
+/* ── Float hearts on click ── */
+function addHeartListeners() {
+  document.addEventListener('click', e => {
+    const symbols = ['♡','❤','✦','✿','❧'];
+    const h = document.createElement('div');
+    h.className = 'float-heart';
+    h.style.left = e.clientX + 'px';
+    h.style.top  = e.clientY + 'px';
+    h.style.color = `hsl(${340 + Math.random()*30},65%,65%)`;
+    h.textContent = symbols[Math.floor(Math.random()*symbols.length)];
+    document.body.appendChild(h);
+    setTimeout(() => h.remove(), 4200);
+  });
+}
+
+/* ── Parallax on scroll ── */
+window.addEventListener('scroll', () => {
+  const y = window.scrollY;
+  starsCanvas.style.transform = `translateY(${y * .2}px)`;
+});
+</script>
+</body>
+</html>
